@@ -1,0 +1,88 @@
+setwd("~/Desktop/Research Project")
+
+library(psych)
+library(dplyr)
+library(tidyverse)
+library(afex)
+library(ggplot2)
+library(GPArotation)
+library(corrplot)
+
+data <- read.csv("corrected_data.csv", header = T)
+
+# Total of 1216 participants
+
+## Before carrying out factor analysis, calculate the correlation matrix and 
+## check the skewness of the data
+
+### Correlation Matrix ###
+
+# Converting to numeric data
+num_dat <- select(data, -c(index,subjectID))
+
+num_dat <- num_dat %>% mutate_at(1:223, as.numeric)
+num_dat
+
+# Get rid of na values
+data_clean <- num_dat %>% select(where(~!any(is.na(.))))
+
+# Excluding values according to attention checks
+max(data_clean$proportion_attention_check_failed) # max value = 1
+
+max(data_clean$proportion_inattentive_incorrect) # max value = 0.4
+
+data_clean <- data_clean %>%
+  filter(proportion_attention_check_failed<0.5)
+# 6 pps excluded
+
+data_check <- data_clean %>%
+  filter(proportion_inattentive_incorrect<0.2)
+# 37 pps exlcluded
+
+# 1216 - 43 pps = 1173 pps
+
+# Removing unnecessary columns for the correlation matrix
+
+cor_data <- select(data_check, -c(proportion_attention_check_failed,proportion_inattentive_incorrect, study))
+
+# Computing correlation matrix
+ 
+(corr_m<- cor(cor_data))
+
+# Correlation plotting - labels need to be fixed
+
+corr_m<- cor(cor_data)
+plot <- corrplot(corr=corr_m)
+
+### Labels needed ####
+colnames(plot) <- c(CQ, DOCS, GAD, IUS, MEWS, PHQ, PSWQ, RRQ, STICSA, WBSI, Age, Gender)
+rownames(plot) <- c(CQ, DOCS, GAD, IUS, MEWS, PHQ, PSWQ, RRQ, STICSA, WBSI, Age, Gender)
+
+
+# Bartlett's test and KMO
+
+cortest.bartlett(corr_m, n=1173)
+
+## Bartlett's test highly significant.
+
+KMO(cor_data)
+
+## Overall MSA = 0.99
+
+
+# Skewness check
+install.packages("moments")
+library(moments)
+
+skew_check <- skewness(cor_data)
+hist(skew_check)
+
+## Skewness seems to be ok?
+
+fa.parallel(cor_data)
+# suggested number of factors = 16, number of components = 10
+
+fa(corr_m)
+
+
+
